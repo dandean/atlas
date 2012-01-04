@@ -1,0 +1,12 @@
+{
+  "author": "Dan Dean <@dandean> (http://dandean.com)",
+  "name": "atlas",
+  "description": "Atlas sits on top of Backbone.js, adding features and enhancing the API",
+  "tags": ["backbone.js","backbone","hack"],
+  "version": "0.0.1",
+  "homepage": "https://github.com/dandean/atlas",
+  "repository": {
+    "url": "git://github.com/dandean/atlas.git"
+  },
+  "main": "atlas"
+}
