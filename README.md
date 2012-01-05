@@ -36,7 +36,7 @@ Events: "before", "after". Event handlers are passed two arguments, `from` and `
 ```js
 {
   route: 'some/route/:path',
-  name: routeName
+  name: 'routeName'
 }
 ```
 
