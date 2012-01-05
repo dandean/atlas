@@ -1,15 +1,18 @@
-(function(){
+!(function(){
+
+  // Declare and export Atlas exactly as Backbone does.
   var root = this;
-
   var Atlas;
-
   if (typeof exports !== 'undefined') {
     Atlas = exports;
-
   } else {
     Atlas = root.Atlas = {};
   }
-  
+
+  // Import underscore exactly as Backbone does.
+  var _ = root._;
+  if (!_ && (typeof require !== 'undefined')) _ = require('underscore')._;
+
   /**
    * Atlas.es5(backbone) -> Backbone
    *
@@ -47,7 +50,7 @@
     Backbone.Model.extend = function(parent, protoProps, staticProps) {
       // Call the original extend method...
       var child = originalBackboneModelExtend.call(Backbone.Model, parent, protoProps, staticProps);
-  
+
       // Swap arguments, if parent wasn't provided...
       if (parent instanceof Backbone.Model === false) {
         protoProps = parent;
@@ -72,7 +75,7 @@
               configurable: true,
               enumerable: true
             });
-        
+
           }
         });
       }
@@ -81,71 +84,31 @@
       return child;
     };
 
-    // Add events to Backbone.History so it can trigger "willNavigate" and "didNavigate".
-    for (var prop in Backbone.Events) {
-      if (Backbone.Events[prop] !== undefined) {
-        Backbone.History.prototype[prop] = Backbone.Events[prop];
-      }
-    }
-    
     return Backbone;
   };
 
   /**
-   * Atlas.navigation(backbone) -> Backbone
+   * Atlas.routerEvents(backbone) -> Backbone
    *
-   * Monkey-patches `Backbone.History` to trigger 'will-navigate' and 'did-navigate' events.
+   * Monkey-patches `Backbone.Router` to trigger 'before' and 'after' events.
   **/
-  Atlas.navigation = function(Backbone) {
-    /**
-     * Monkey path `Backbone.History#loadUrl so that it fires `willNavigate` and
-     * `didNavigate` events.
-    **/
-    var preNavigateFragment;
-    var navigate = Backbone.History.prototype.navigate;
-    Backbone.History.prototype.navigate = function() {
-      preNavigateFragment = this.getFragment();
-      navigate.apply(this, arguments);
-    };
+  Atlas.routerEvents = function(Backbone) {
+    var routeFn = Backbone.Router.prototype.route;
+    var previousRouteInfo;
 
-    /**
-     * Monkey path `Backbone.History#loadUrl so that it fires `willNavigate` and
-     * `didNavigate` events.
-    **/
-    var loadUrl = Backbone.History.prototype.loadUrl;
-    Backbone.History.prototype.loadUrl = function(path) {
-  
-      if (typeof path == 'undefined') {
-        // `path` will be undefined when `loadUrl` is invoked from the back/forward buttons. In
-        // this case, the back button has already updated the URL, so use backbone's
-        // `getFragment` method to figure out our destination path.
-        path = this.getFragment();
-      }
-  
-      // `preNavigateFragment` is set from Backbone.History#navigate, which saves a reference to
-      // the current fragment before updating it. When `loadUrl` is invoked from back/forward
-      // buttons, preNavigateFragment will be `undefined`, but Backbone.History#fragment still
-      // contains a reference to where we're coming from.
-      var from = preNavigateFragment || this.fragment;
-  
-      // `to` is where we're going. Normalize the path to removing leading/trailing slashes
-      var to = (path || '').replace(/^\/|\/$/g, '');
+    Backbone.Router.prototype.route = function(route, name, callback) {
+      // Redefine callback, maintaining scope...
+      var wrapped = _.bind(function() {
+        var info = { route: route, name: name };
+        this.trigger('before', previousRouteInfo || {}, info);
+        callback.apply(this, arguments);
+        this.trigger('after', previousRouteInfo || {}, info);
+        // Save new route info for next time.
+        previousRouteInfo = info;
+      }, this);
 
-      // Unset so that it's only used once.
-      preNavigateFragment = undefined;
-
-      // Assume we're navigating and fire all handlers.
-      this.trigger("willNavigate", from, to);
-
-      // `loadUrl` returns `true` or `false` based on if it could find a route or not. When it
-      // does, trigger the "didNavigate" event.
-      if (loadUrl.call(this, to)) {
-        this.trigger("didNavigate", from, to);
-        return true;
-      }
-
-      this.trigger("didNotNavigate", from, to);
-      return false;
+      // Call the original route function, but with the redefined callback.
+      routeFn.call(this, route, name, wrapped);
     };
 
     return Backbone;
@@ -157,7 +120,7 @@
    * Enhances Backbone with all of Atlas' features.
   **/
   Atlas.all = function(Backbone) {
-    return Atlas.es5(Atlas.navigation(Backbone));
+    return Atlas.es5(Atlas.routerEvents(Backbone));
   };
 
 }).call(this);
