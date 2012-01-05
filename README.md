@@ -26,12 +26,21 @@ user.username = 'dandean';
 ```
 
 
-Navigation Events
+Router Events
 -----------------
 
-Atlas triggers events before and after calls to `Backbone.history.navigate(...)`. These events can do awesome things like notify your views that they should go ahead and remove themselves from the DOM.
+Atlas triggers events before and after routes are executed. These events can do awesome things like notify your views that they should go ahead and remove themselves from the DOM.
 
-Events: "willNavigate", "didNavigate".
+Events: "before", "after". Event handlers are passed two arguments, `from` and `to`, which are both objects in the form of:
+
+```js
+{
+  route: 'some/route/:path',
+  name: routeName
+}
+```
+
+Example:
 
 ```js
 var router = Backbone.Router.extend({
@@ -51,14 +60,14 @@ var router = Backbone.Router.extend({
     $('body').append(worksView.el);
 
     var navigateHandler = function(from, to) {
-      if (from === 'library') {
+      if (from.name === 'library') {
         Backbone.history.unbind('willNavigate', navigateHandler);
         collectionsView.remove();
         worksView.remove();
       }
     };
     
-    Backbone.history.bind("willNavigate", navigateHandler);
+    this.bind("before", navigateHandler);
   },
         
   ...
