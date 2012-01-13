@@ -14,6 +14,70 @@
   if (!_ && (typeof require !== 'undefined')) _ = require('underscore')._;
 
   /**
+   * Atlas.collectionSorting(backbone) -> Backbone
+   *
+   * Adds three new methods to Backbone.Collection instances: `sortWith`, `sortOn` and `reverseSortOn`.
+  **/
+  Atlas.collectionSorting = function(Backbone) {
+
+    /**
+     * Backbone.Collection#sortWith(comparer, silent) -> Backbone.Collection
+     * - comperer (Function)
+     * - silent (Boolean);
+     *
+     * Much like the native Array#sort, this method uses the provided function to determine a collection's sort order.
+    **/
+    Backbone.Collection.prototype.sortWith = function(compare, silent) {
+      if (!compare) return this;
+      this.models = this.models.sort(compare);
+      if (!silent) this.trigger('reset', this, { silent: silent });
+      return this;
+    };
+
+    var createSorter = function(attribute) {
+      return function(a, b) {
+        var a = a[attribute], b = b[attribute];
+
+        if (a < b) {
+          return -1;
+        } else if (a > b) {
+          return 1;
+        }
+        return 0;
+      }
+    };
+
+    /**
+     * Backbone.Collection#sortOn(attribute, silent) -> Backbone.Collection
+     * - attribute (String)
+     * - silent (Boolean);
+     *
+     * Sorts the collection in the natural sort order of the specified attribute.
+    **/
+    Backbone.Collection.prototype.sortOn = function(attribute, silent) {
+      return this.sortWith(createSorter(attribute), silent);
+    };
+
+    /**
+     * Backbone.Collection#reverseSortOn(attribute, silent) -> Backbone.Collection
+     * - attribute (String)
+     * - silent (Boolean);
+     *
+     * Reverse sorts the collection in the natural sort order of the specified attribute.
+    **/
+    Backbone.Collection.prototype.reverseSortOn = function(attribute, silent) {
+      var sorter = createSorter(attribute);
+      return this.sortWith(function(a, b) {
+        return -1 * sorter(a, b);
+      }, silent);
+    };
+
+    return Backbone;
+
+  };
+
+
+  /**
    * Atlas.es5(backbone) -> Backbone
    *
    * Adds ES5 getters and setters to instances of `Backbone.Model`.
@@ -120,7 +184,10 @@
    * Enhances Backbone with all of Atlas' features.
   **/
   Atlas.all = function(Backbone) {
-    return Atlas.es5(Atlas.routerEvents(Backbone));
+    Backbone = Atlas.es5(Backbone);
+    Backbone = Atlas.collectionSorting(Backbone);
+    Backbone = Atlas.routerEvents(Backbone);
+    return Backbone;
   };
 
 }).call(this);
